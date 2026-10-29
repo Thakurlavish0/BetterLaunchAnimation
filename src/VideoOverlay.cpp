@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -376,6 +377,15 @@ bool VideoOverlay::initializeOnRenderThread() {
   std::error_code fileError;
   if (!std::filesystem::is_regular_file(m_videoPath, fileError)) {
     m_logger->warn("Animation file is missing or unreadable: {}",
+                   m_videoPath.string());
+    return false;
+  }
+  std::ifstream video(m_videoPath, std::ios::binary);
+  std::array<char, 12> mp4Header{};
+  video.read(mp4Header.data(), static_cast<std::streamsize>(mp4Header.size()));
+  if (video.gcount() != static_cast<std::streamsize>(mp4Header.size()) ||
+      std::string_view(mp4Header.data() + 4, 4) != "ftyp") {
+    m_logger->warn("Animation file is not a valid MP4 container: {}",
                    m_videoPath.string());
     return false;
   }
