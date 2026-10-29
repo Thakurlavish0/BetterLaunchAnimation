@@ -4,5 +4,7 @@ build/
 .idea/
 .DS_Store
 compile_commands.json
+__pycache__/
+*.py[cod]
 *.so
 *.levipack
