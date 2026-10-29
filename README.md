@@ -1,40 +1,51 @@
-# Better launch animation
+# Better Launch Animation
 
-A native LeviLauncher mod (Android, arm64) that plays **your own animation** (made for a 17 second clip,
-any length works) over Minecraft's normal launch animation.
+A native Android arm64 LeviLauncher mod that plays a video over Minecraft's launch screen, then fades back to the game. The mod source uses the LeviLauncher **Preloader Android** lifecycle and packages as a `.levipack`.
 
-Built from the structure of the BedrockTools template (Preloader `PL_REGISTER_MOD`, xmake, `.levipack`).
-
-## How it works
-- Hooks `eglSwapBuffers` in `libEGL.so` (the game imports it; it renders with OpenGL ES 3.1, no Vulkan).
-- On the first real game frame it draws a full-screen overlay: your video is decoded by Android's `MediaPlayer`
-  into a `SurfaceTexture` and drawn with a GLES shader. Audio comes from the same player.
-- Touch / key / mouse input is swallowed while it plays; the overlay fades out when the video ends.
-- **No Minecraft signatures or offsets are used**, so it should keep working across game updates.
+> The linked [`bedrock-tool/bedrocktool`](https://github.com/bedrock-tool/bedrocktool) is a separate Go desktop/CLI utility for Bedrock worlds, skins, and related tools; it does not provide LeviLauncher native-mod hooks. This mod therefore uses the compatible Preloader Android API already configured in this repository rather than importing unrelated code from that project.
 
 ## Add your animation
-Copy your file to `resources/launch_animation.mp4` (MP4, H.264 + AAC, 30 fps, <= 1080p is safest).
+
+Copy your MP4 to `resources/launch_animation.mp4`. Recommended format: MP4 with H.264 video and AAC audio, 30 fps, and 1080p or lower. The repository does not include a video, so until you add one the mod safely leaves Minecraft's normal launch animation visible.
+
+## What the mod does
+
+- Hooks `eglSwapBuffers` in `libEGL.so` using the Preloader hook API; no Minecraft signatures or offsets are used.
+- Decodes the local video with Android `MediaPlayer` on a worker thread and presents it with a `SurfaceTexture` / GLES external texture.
+- Supports fit (black bars), fill (center crop), and stretch scale modes; audio volume is configurable.
+- Swallows touch, key, mouse, and text input while the video is visible. Optional tap/Back/Escape skipping fades the video out.
+- Fades out at the end of playback and has a configurable maximum display time. Missing or unsupported video falls back to the normal game screen.
 
 ## Build (no PC needed)
-1. Push this folder to a GitHub repo.
-2. Actions -> **Build** -> run it -> download artifact `BetterLaunchAnimation-levipack`.
-3. Import `BetterLaunchAnimation.levipack` in LeviLauncher and enable it.
 
-Local build: `xmake f -y -p android -a arm64-v8a -m release --ndk=/path/to/android-ndk-r28c && xmake -y`
+1. Push this folder to a GitHub repository.
+2. Open **Actions → Build → Run workflow**.
+3. Download the `BetterLaunchAnimation-levipack` artifact.
+4. Import `BetterLaunchAnimation.levipack` in LeviLauncher and enable the mod.
 
-Set your name in `include/betterlaunch/Version.hpp` (`Author`) before building.
+Local build:
 
-## Config (`config/config.json`, created on first launch)
+```sh
+xmake f -y -p android -a arm64-v8a -m release --ndk=/path/to/android-ndk-r28c
+xmake -y
+```
+
+Set the author in `include/betterlaunch/Version.hpp` before building. The pack contains the native library, `manifest.json`, icon, and files from `resources/`.
+
+## Config
+
+Created at `config/config.json` on first launch:
+
 | key | default | meaning |
-|---|---|---|
-| enabled | true | master switch |
-| video | launch_animation.mp4 | file in resources/ (or absolute path) |
-| scale_mode | fit | fit (black bars), fill (crop), stretch |
-| volume | 1.0 | 0.0 - 1.0 |
-| allow_skip | false | tap / Back to skip |
-| fade_out_ms | 400 | fade into the game at the end |
-| max_seconds | 30 | failsafe: overlay is always removed after this |
+|---|---:|---|
+| `enabled` | `true` | Master switch |
+| `video` | `launch_animation.mp4` | File under `resources/` (or an absolute path) |
+| `scale_mode` | `fit` | `fit` (black bars), `fill` (crop), or `stretch` |
+| `volume` | `1.0` | Audio volume from `0.0` to `1.0` |
+| `allow_skip` | `false` | Allow tap, Back, or Escape to start the fade |
+| `fade_out_ms` | `400` | Fade duration in milliseconds |
+| `max_seconds` | `30` | Maximum overlay time and preparation failsafe, in seconds |
 
 ## Troubleshooting
-`adb logcat -s BetterLaunchAnimation`. If the file is missing or can't be decoded, the mod steps aside and the
-normal animation shows. The game keeps loading underneath the overlay.
+
+Use `adb logcat -s "Better Launch Animation"` for diagnostics. If the video is missing, unreadable, or unsupported by Android's media decoder/GLES external-texture extension, the mod logs the reason and steps aside so the normal game animation can continue.

@@ -14,7 +14,7 @@ package_end()
 
 add_requires("preloader")
 add_requires("nlohmann_json v3.11.3")
-add_requires("fmt")
+add_requires("fmt 11.2.0")
 
 target("BetterLaunchAnimation")
     set_kind("shared")
@@ -28,7 +28,7 @@ target("BetterLaunchAnimation")
         add_cxflags("-fPIC", "-O2", "-ffunction-sections", "-fdata-sections", "-fexceptions", "-w")
         add_cxxflags("-fno-rtti")
         add_shflags("-Wl,--gc-sections", "-Wl,--hash-style=gnu", "-Wl,-z,max-page-size=16384")
-        add_links("android", "log", "EGL", "GLESv3", "GLESv2")
+        add_links("android", "log", "EGL", "GLESv3", "GLESv2", "dl")
     end
 
     after_build(function (target)
